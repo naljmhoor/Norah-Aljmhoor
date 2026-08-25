@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Easier By Design</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:ital,opsz,wght@0,12..96,200..800;1,12..96,200..800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* ============ RESET & TOKENS ============ */
+  *,*::before,*::after{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  :root{
+    --ink:#171717;
+    --ink-2:#211F1D;
+    --ink-3:#3A3331;
+    --cream:#F7F5F0;
+    --cream-2:#EFE7D9;
+    --cream-3:#E2D5BE;
+    --burgundy:#8F2942;
+    --burgundy-bright:#C85272;
+    --pink:#D9A6B2;
+    --tint-bg:#F1E1E3;
+    --tint-surface:#FBF3F4;
+    --gray:#B7B1A8;
+    --gray-ink:#6E675F;
+    --gray-cream:#A79A8F;
+    --font-display:'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+    --font-body:'Manrope', 'Segoe UI', system-ui, sans-serif;
+    --ease: cubic-bezier(.16,.84,.44,1);
+  }
+  body{
+    font-family:var(--font-body);
+    background:var(--ink);
+    color:var(--cream);
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  img,svg{display:block; max-width:100%;}
+  .visually-hidden{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap;}
+
+  /* ============ DECK / SLIDE FRAMEWORK ============ */
+  #deck{
+    height:100dvh; height:100vh;
+    overflow-y:auto; overflow-x:hidden;
+    scroll-snap-type:y mandatory;
+  }
+  .slide{
+    min-height:100dvh; min-height:100vh;
+    width:100%;
+    scroll-snap-align:start;
+    scroll-snap-stop:always;
+    position:relative;
+    display:flex;
+    align-items:center;
+    padding:clamp(1.75rem,5vw,4rem) clamp(1.35rem,6.5vw,6.5rem);
+    overflow:hidden;
+    background:var(--bg);
+    color:var(--fg);
+  }
+  .slide--light{ --bg:var(--cream); --fg:var(--ink); --muted:var(--gray-ink); --accent:var(--burgundy); --line:rgba(23,23,23,.15); --surface:var(--cream-2); --surface-2:var(--cream-3);}
+  .slide--dark{ --bg:var(--ink); --fg:var(--cream); --muted:var(--gray-cream); --accent:var(--burgundy-bright); --line:rgba(247,245,240,.18); --surface:var(--ink-2); --surface-2:var(--ink-3);}
+  .slide--tint{ --bg:var(--tint-bg); --fg:var(--ink); --muted:#8C6A70; --accent:var(--burgundy); --line:rgba(143,41,66,.22); --surface:var(--tint-surface); --surface-2:#F6DEE2;}
+
+  .slide__inner{ width:100%; max-width:1360px; min-width:0; margin:0 auto; position:relative; z-index:2;}
+
+  .ghost-num{
+    position:absolute; top:clamp(1.1rem,4vw,2.25rem); left:clamp(1.35rem,6.5vw,3.25rem);
+    font-family:var(--font-display); font-weight:800; font-size:clamp(3.2rem,9vw,6.5rem);
+    color:var(--fg); opacity:.055; letter-spacing:-.03em; line-height:1; pointer-events:none; z-index:1;
+  }
+
+  .eyebrow{
+    font-family:var(--font-body); font-weight:700; font-size:.7rem; letter-spacing:.16em;
+    text-transform:uppercase; color:var(--muted); margin-bottom:1.35rem; display:flex; align-items:center; gap:.6em;
+  }
+  .eyebrow::before{ content:""; width:1.6em; height:1px; background:var(--accent); display:inline-block;}
+
+  .title{
+    font-family:var(--font-display); font-weight:800; line-height:.98; letter-spacing:-.025em;
+    text-wrap:balance; font-size:clamp(2.15rem,5.1vw,4.3rem); margin:0 0 1.4rem; max-width:16ch;
+  }
+  .title em{ font-style:normal; color:var(--accent);}
+  .kicker{ font-size:clamp(1rem,1.6vw,1.2rem); color:var(--muted); max-width:46ch; margin-bottom:1.5rem; font-weight:500;}
+
+  .prose{ font-size:clamp(.98rem,1.25vw,1.12rem); line-height:1.65; color:var(--fg); max-width:56ch; font-weight:400;}
+  .prose + .prose{ margin-top:.9rem;}
+  .prose b{ color:var(--accent); font-weight:700;}
+  .muted-row{
+    font-family:var(--font-body); font-weight:600; font-size:.78rem; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--muted); line-height:1.9;
+  }
+  .muted-row .dot{ color:var(--accent); margin:0 .5em;}
+
+  .pull{
+    font-family:var(--font-display); font-weight:600; font-size:clamp(1.35rem,2.6vw,2.15rem); line-height:1.18;
+    max-width:22ch; letter-spacing:-.01em;
+  }
+  .pull em{font-style:normal; color:var(--accent);}
+
+  hr.rule{ border:0; border-top:1px solid var(--line); margin:1.6rem 0;}
+
+  /* ============ REVEAL / MOTION ============ */
+  .reveal{ opacity:0; transform:translateY(20px); transition:opacity .75s var(--ease), transform .75s var(--ease); transition-delay:calc(var(--d,0)*80ms);}
+  .slide.in-view .reveal{ opacity:1; transform:translateY(0);}
+  .reveal-num{ opacity:0; transform:scale(.9); transition:opacity .85s ease, transform .85s cubic-bezier(.2,.85,.3,1.25); transition-delay:calc(var(--d,0)*80ms);}
+  .slide.in-view .reveal-num{ opacity:1; transform:scale(1);}
+  .draw path,.draw line,.draw circle.draw-c{ stroke-dasharray:1; stroke-dashoffset:1; transition:stroke-dashoffset 1.15s cubic-bezier(.3,.6,.2,1); transition-delay:.35s;}
+  .slide.in-view .draw path,.slide.in-view .draw line,.slide.in-view .draw circle.draw-c{ stroke-dashoffset:0;}
+  .grow-line{ transform:scaleX(0); transform-origin:left; transition:transform 1s var(--ease); transition-delay:.25s;}
+  .slide.in-view .grow-line{ transform:scaleX(1);}
+
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{ transition-duration:.01ms !important; animation-duration:.01ms !important; scroll-behavior:auto !important;}
+  }
+
+  /* ============ HUD ============ */
+  .hud{ position:fixed; inset:0; pointer-events:none; z-index:50;}
+  .hud__bar{ position:absolute; top:0; left:0; height:2px; width:0%; background:#fff; mix-blend-mode:difference; transition:width .25s linear;}
+  .hud__counter{
+    position:absolute; top:clamp(1rem,3vw,1.6rem); right:clamp(1.25rem,4vw,2.5rem);
+    font-family:var(--font-body); font-weight:700; font-size:.78rem; letter-spacing:.1em;
+    color:#fff; mix-blend-mode:difference;
+  }
+  .hud__brand{
+    position:absolute; top:clamp(1rem,3vw,1.6rem); left:clamp(1.25rem,4vw,2.5rem);
+    font-family:var(--font-body); font-weight:700; font-size:.72rem; letter-spacing:.16em; text-transform:uppercase;
+    color:#fff; mix-blend-mode:difference;
+  }
+  .hud__dots{
+    position:absolute; right:clamp(.9rem,2.6vw,1.6rem); top:50%; transform:translateY(-50%);
+    display:flex; flex-direction:column; gap:.55rem; pointer-events:auto;
+  }
+  .hud__dots button{
+    appearance:none; border:none; background:#fff; opacity:.35; mix-blend-mode:difference;
+    width:6px; height:6px; border-radius:50%; padding:0; cursor:pointer; transition:opacity .25s, transform .25s;
+  }
+  .hud__dots button:hover{ opacity:.75;}
+  .hud__dots button.active{ opacity:1; transform:scale(1.6);}
+  .hud__dots button:focus-visible{ outline:1.5px solid #fff; outline-offset:3px; opacity:1;}
+  .hint{
+    position:absolute; bottom:clamp(1.1rem,3.4vw,1.9rem); right:clamp(1.25rem,4vw,2.5rem);
+    font-family:var(--font-body); font-weight:700; font-size:.7rem; letter-spacing:.14em; text-transform:uppercase;
+    color:#fff; mix-blend-mode:difference; display:flex; align-items:center; gap:.5em;
+    animation:hintFloat 1.8s ease-in-out infinite;
+    transition:opacity .5s ease;
+  }
+  body.scrolled .hint{ opacity:0; pointer-events:none;}
+  @keyframes hintFloat{ 0%,100%{ transform:translateY(0);} 50%{ transform:translateY(5px);} }
+
+  /* ============ SLIDE 01 — OPENING ============ */
+  .s01 .hero-line{ font-family:var(--font-display); font-weight:800; font-size:clamp(2.6rem,8.4vw,7.4rem); line-height:.97; letter-spacing:-.03em; text-wrap:balance;}
+  .s01 .hero-line em{ font-style:normal; color:var(--accent);}
+  .s01 .support{
+    font-family:var(--font-body); font-weight:600; font-size:clamp(.85rem,1.4vw,1.05rem); letter-spacing:.02em;
+    color:var(--muted); margin-top:1.6rem; display:flex; flex-wrap:wrap; gap:.55em;
+  }
+  .s01 .support .sep{ color:var(--accent);}
+  .s01 .byline{ margin-top:clamp(3rem,9vw,6rem); padding-top:1.3rem; border-top:1px solid var(--line); max-width:22rem;}
+  .s01 .byline .name{ font-family:var(--font-display); font-weight:700; font-size:1.2rem;}
+  .s01 .byline .role{ font-family:var(--font-body); font-weight:600; font-size:.72rem; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); margin-top:.3rem;}
+
+  /* ============ SLIDE 02 — CURIOSITY ============ */
+  .s02 .grid{ display:grid; grid-template-columns:1.05fr 1fr; gap:clamp(2rem,5vw,4rem); align-items:center;}
+  .s02 .venn{ width:100%; max-width:480px; margin-inline:auto;}
+  .quote-card{
+    margin-top:2rem; padding:1.1rem 1.4rem; border-left:2px solid var(--accent);
+    font-family:var(--font-display); font-style:italic; font-weight:600; font-size:clamp(1.05rem,1.9vw,1.4rem);
+  }
+  @media (max-width:820px){ .s02 .grid{ grid-template-columns:1fr;} }
+
+  /* ============ SLIDE 03 — FOUNDATION ============ */
+  .stepper{ position:relative; display:flex; justify-content:space-between; padding:1.4rem 0 0; margin-bottom:.4rem;}
+  .stepper::before{
+    content:""; position:absolute; left:2%; right:2%; top:6px; height:1px; background:var(--line); z-index:0;
+  }
+  .stepper .node{ position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; gap:.55rem; flex:1; min-width:0;}
+  .stepper .node i{ width:8px; height:8px; border-radius:50%; background:var(--fg); opacity:.55;}
+  .stepper .node span{ font-size:.66rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); text-align:center;}
+  @media (max-width:640px){
+    .stepper{ flex-wrap:wrap; row-gap:1.5rem; column-gap:.4rem; justify-content:flex-start;}
+    .stepper::before{ display:none;}
+    .stepper .node{ flex:0 0 30%;}
+  }
+  .evolve-tag{ display:flex; align-items:center; gap:.7rem; margin:2.1rem 0 1.1rem; font-size:.72rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--accent);}
+  .evolve-tag::after{ content:""; flex:1; height:1px; background:var(--line);}
+  .big-questions{ display:flex; flex-direction:column; gap:.25rem;}
+  .big-questions p{
+    font-family:var(--font-display); font-weight:800; letter-spacing:-.02em; line-height:1.05;
+    font-size:clamp(1.5rem,4vw,2.9rem);
+  }
+  .big-questions p:nth-child(1){ font-size:clamp(1.7rem,4.6vw,3.3rem); color:var(--accent);}
+  .s03 .title{ max-width:20ch;}
+
+  /* ============ SLIDE 04 — NUMBERS ============ */
+  .stat-grid{ display:grid; grid-template-columns:1.3fr 1fr; grid-template-rows:auto auto; gap:0 clamp(2rem,5vw,4.5rem);}
+  .stat{ padding:1.6rem 0; border-top:1px solid var(--line);}
+  .stat:nth-child(1){ grid-column:1; grid-row:1;}
+  .stat:nth-child(2){ grid-column:2; grid-row:1;}
+  .stat:nth-child(3){ grid-column:1; grid-row:2;}
+  .stat:nth-child(4){ grid-column:2; grid-row:2;}
+  .stat .num{ font-family:var(--font-display); font-weight:800; color:var(--accent); letter-spacing:-.03em; line-height:.92; font-variant-numeric:tabular-nums;}
+  .stat:nth-child(1) .num{ font-size:clamp(3.8rem,9vw,7.5rem);}
+  .stat:nth-child(2) .num{ font-size:clamp(2.6rem,6vw,5rem);}
+  .stat:nth-child(3) .num{ font-size:clamp(2.6rem,6vw,5rem);}
+  .stat:nth-child(4) .num{ font-size:clamp(2.6rem,6vw,5rem);}
+  .stat .label{ font-weight:700; font-size:.78rem; letter-spacing:.1em; text-transform:uppercase; margin-top:.5rem;}
+  .stat .example{ font-size:.85rem; color:var(--muted); font-style:italic; margin-top:.3rem;}
+  @media (max-width:760px){ .stat-grid{ display:flex; flex-direction:column; gap:0;} }
+
+  /* ============ SLIDE 05 — EVOLUTION ============ */
+  .journey{ position:relative; display:flex; align-items:flex-end; justify-content:space-between; gap:clamp(.6rem,2vw,1.5rem); margin:2.6rem 0 1.5rem; padding-top:2.2rem;}
+  .journey::before{ content:""; position:absolute; left:1%; right:6%; bottom:22px; height:1px; background:var(--line);}
+  .journey .stop{ position:relative; display:flex; flex-direction:column; align-items:center; text-align:center; flex:1; gap:.75rem;}
+  .journey .stop .node{ border-radius:50%; border:1.6px solid var(--accent); background:transparent;}
+  .journey .stop:nth-child(1) .node{ width:34px; height:34px;}
+  .journey .stop:nth-child(2) .node{ width:46px; height:46px;}
+  .journey .stop:nth-child(3) .node{ width:60px; height:60px;}
+  .journey .stop:nth-child(4) .node{ width:80px; height:80px; background:var(--accent); border-color:var(--accent); display:flex; align-items:center; justify-content:center; color:var(--bg); font-family:var(--font-display); font-weight:800; font-size:.85rem;}
+  .journey .stop .prod{ font-weight:800; font-family:var(--font-display); font-size:.82rem; letter-spacing:-.01em;}
+  .journey .stop .act{ font-size:.68rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--muted);}
+  .journey-close{ text-align:center; font-size:.95rem; color:var(--muted); max-width:38ch; margin:1.6rem auto 0;}
+  @media (max-width:760px){ .journey{ flex-wrap:wrap; row-gap:2rem;} .journey::before{ display:none;} }
+
+  /* ============ SLIDE 06 — SCF ============ */
+  .s06 .grid{ display:grid; grid-template-columns:1fr 1fr; gap:clamp(2rem,5vw,4rem); align-items:start;}
+  .ecosystem{ display:flex; flex-direction:column; align-items:center; gap:0; max-width:340px; margin-inline:auto;}
+  .eco-node{ width:100%; padding:.85rem 1.1rem; text-align:center; border:1px solid var(--line); font-weight:700; font-size:.82rem; letter-spacing:.02em;}
+  .eco-node.core{ background:var(--accent); color:var(--bg); border-color:var(--accent); font-family:var(--font-display); font-size:.95rem;}
+  .eco-node .sub{ display:block; font-weight:500; font-size:.7rem; letter-spacing:.06em; text-transform:uppercase; opacity:.7; margin-top:.25rem;}
+  .eco-link{ display:flex; flex-direction:column; align-items:center; color:var(--muted); font-size:.85rem; padding:.35rem 0;}
+  .eco-branch{ display:flex; align-items:center; gap:.6rem; width:100%; margin-top:.1rem;}
+  .eco-branch .line{ flex:1; height:1px; background:var(--line);}
+  @media (max-width:820px){ .s06 .grid{ grid-template-columns:1fr;} }
+  .s06 .muted-row{ margin-top:1.4rem;}
+  .s06 .pull{ margin-top:1.6rem;}
+
+  /* ============ SLIDE 07 — FINANCING JOURNEY ============ */
+  .compare{ display:grid; grid-template-columns:1fr auto 1fr auto 1fr; gap:clamp(.5rem,2vw,1.5rem); align-items:start; margin-top:1rem;}
+  .compare .col{ display:flex; flex-direction:column;}
+  .compare .col h4{ font-size:.72rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; margin-bottom:.9rem; color:var(--muted);}
+  .compare .col.after h4{ color:var(--accent);}
+  .compare .col p{ font-size:.88rem; padding:.55rem 0; border-top:1px solid var(--line);}
+  .compare .col.after p{ font-weight:600;}
+  .compare .arrow{ display:flex; align-items:center; justify-content:center; color:var(--accent); font-size:1.3rem; padding-top:2rem;}
+  .better{ text-align:center; margin:2.2rem 0 1.6rem; font-family:var(--font-display); font-weight:800; font-size:clamp(1.5rem,3.4vw,2.4rem);}
+  .better em{ font-style:normal; color:var(--accent);}
+  .metrics{ display:flex; gap:clamp(1rem,3vw,2.2rem); flex-wrap:wrap; justify-content:center;}
+  .metric-ph{ border:1.4px dashed var(--line); padding:1.1rem 1.4rem; text-align:center; min-width:150px;}
+  .metric-ph .num{ font-family:var(--font-display); font-weight:800; font-size:1.7rem; color:var(--gray-ink); opacity:.55;}
+  .metric-ph .label{ font-size:.68rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-top:.25rem;}
+  .metric-ph .note{ font-size:.62rem; font-style:italic; color:var(--muted); margin-top:.4rem; opacity:.8;}
+  .metric{ padding:1.1rem 1.5rem; text-align:center; min-width:150px; border-top:1.6px solid var(--accent);}
+  .metric .num{ font-family:var(--font-display); font-weight:800; font-size:clamp(1.8rem,3.4vw,2.4rem); color:var(--accent); letter-spacing:-.02em; font-variant-numeric:tabular-nums;}
+  .metric .label{ font-size:.68rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-top:.4rem;}
+  @media (max-width:760px){ .compare{ grid-template-columns:1fr; } .compare .arrow{ transform:rotate(90deg); padding:.4rem 0;} }
+
+  /* ============ SLIDE 08 — CLM TURN ============ */
+  .s08 .zero-line{ font-family:var(--font-display); font-weight:800; font-size:clamp(2.1rem,6vw,4.6rem); letter-spacing:-.03em; line-height:1.02; max-width:14ch;}
+  .s08 .clm-lockup{ margin-top:clamp(1.6rem,5vw,3rem);}
+  .s08 .clm-lockup .clm{ font-family:var(--font-display); font-weight:800; font-size:clamp(4.5rem,16vw,11rem); line-height:.85; color:var(--accent); letter-spacing:-.04em;}
+  .s08 .clm-lockup .full{ font-size:clamp(.85rem,1.6vw,1.15rem); font-weight:600; letter-spacing:.06em; color:var(--muted); margin-top:.4rem;}
+  .s08 .own-line{ margin-top:2rem; font-size:.95rem; color:var(--muted); font-weight:600;}
+
+  /* ============ SLIDE 09 — 0 TO 1 ============ */
+  .badge01{
+    display:inline-flex; align-items:center; gap:.5rem; border:1px solid var(--accent); color:var(--accent);
+    font-family:var(--font-display); font-weight:800; font-size:.95rem; padding:.35rem .8rem; margin-bottom:1.2rem;
+  }
+  .flowline{ position:relative; display:grid; grid-template-columns:repeat(5,1fr); row-gap:2.2rem; column-gap:.5rem; margin:1.8rem 0;}
+  .flowline .row{ display:contents;}
+  .flowline .step{ position:relative; display:flex; flex-direction:column; align-items:center; gap:.5rem; text-align:center;}
+  .flowline .step i{ width:7px; height:7px; border-radius:50%; background:var(--accent);}
+  .flowline .step span{ font-size:.64rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); line-height:1.25;}
+  .flowline .r1::before{ content:""; position:absolute; top:3px; left:8%; right:8%; height:1px; background:var(--line); z-index:-1;}
+  @media (max-width:700px){ .flowline{ grid-template-columns:repeat(2,1fr);} }
+  .s09 .prose{ color:var(--muted);}
+
+  /* ============ SLIDE 10 — CONTEXT ============ */
+  .radial{ position:relative; width:min(100%,560px); aspect-ratio:1; margin:1.5rem auto 0; display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(3,1fr); place-items:center; gap:.3rem;}
+  .radial-ring{ position:absolute; inset:8%; border:1px solid var(--line); border-radius:50%;}
+  .radial .center{
+    grid-column:2; grid-row:2; text-align:center; font-family:var(--font-display); font-weight:800; font-style:italic;
+    font-size:clamp(1rem,2vw,1.4rem); max-width:9ch; z-index:2; position:relative;
+  }
+  .radial .term{ font-size:.7rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; text-align:center; color:var(--muted); z-index:2; position:relative;}
+  .down-to{ text-align:center; margin-top:1.6rem;}
+  .down-to .arrow{ color:var(--accent); font-size:1.2rem;}
+  .down-to .result{ font-family:var(--font-display); font-weight:800; font-size:clamp(1.1rem,2.2vw,1.6rem); color:var(--accent); margin-top:.3rem;}
+  .s10 .prose{ margin:1.8rem auto 0; text-align:center;}
+  .s10 .eyebrow{ justify-content:center;}
+  .s10 .title{ text-align:center; max-width:none; margin-inline:auto;}
+
+  /* ============ SLIDE 11 — LEARNING ============ */
+  .cert-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:0;}
+  .cert-col{ padding:0 1.2rem; border-left:1px solid var(--line);}
+  .cert-col:first-child{ border-left:none; padding-left:0;}
+  .cert-col h4{ font-family:var(--font-display); font-weight:800; font-size:.85rem; letter-spacing:.02em;}
+  .cert-col .benefit{ font-size:.75rem; color:var(--accent); font-weight:700; margin-top:.25rem; margin-bottom:1.1rem;}
+  .cert-slot{ border:1.4px dashed var(--line); padding:.65rem .7rem; margin-bottom:.6rem; display:flex; align-items:center; gap:.55rem;}
+  .cert-slot .logo{ width:20px; height:20px; border-radius:50%; border:1px solid var(--line); flex:none;}
+  .cert-slot .txt{ line-height:1.3;}
+  .cert-slot .txt .cname{ font-size:.72rem; font-style:italic; color:var(--muted);}
+  .cert-slot .txt .issuer{ font-size:.62rem; color:var(--muted); opacity:.75;}
+  .cert-close{ margin-top:2rem; font-family:var(--font-display); font-weight:700; font-size:clamp(1.15rem,2.2vw,1.55rem); max-width:40ch;}
+  .cert-close em{ font-style:normal; color:var(--accent);}
+  @media (max-width:820px){ .cert-grid{ grid-template-columns:1fr 1fr; row-gap:1.6rem;} .cert-col:nth-child(3){ border-left:none;} }
+
+  /* ============ SLIDE 12 — BEYOND WORK ============ */
+  .s12 .grid{ display:grid; grid-template-columns:1.1fr .9fr; gap:clamp(2rem,5vw,3.5rem); align-items:center;}
+  .big-q{ font-family:var(--font-display); font-style:italic; font-weight:700; font-size:clamp(2rem,5.4vw,4rem); letter-spacing:-.02em;}
+  .map-wrap{ opacity:.9;}
+  @media (max-width:820px){ .s12 .grid{ grid-template-columns:1fr;} }
+  .s12 .prose{ margin-top:1.2rem;}
+  .s12 .pull{ margin-top:1rem;}
+
+  /* ============ SLIDE 13 — PERSONAL PRODUCT ============ */
+  .rec-flow{ display:grid; grid-template-columns:1fr auto 1fr; gap:clamp(1rem,3vw,2.5rem); align-items:center; margin:1.8rem 0;}
+  .inputs{ display:flex; flex-direction:column; gap:.65rem;}
+  .input-chip{ border:1px solid var(--line); padding:.6rem .9rem; font-size:.78rem; font-weight:700; letter-spacing:.03em; position:relative;}
+  .bracket{ position:relative; width:22px; align-self:stretch;}
+  .bracket::before{ content:""; position:absolute; top:8%; bottom:8%; left:0; width:1px; background:var(--line);}
+  .bracket::after{ content:""; position:absolute; top:50%; left:0; width:100%; height:1px; background:var(--line);}
+  .model-out{ display:flex; flex-direction:column; align-items:center; gap:1.1rem;}
+  .model-box{ background:var(--accent); color:var(--bg); font-family:var(--font-display); font-weight:800; text-align:center; padding:1.1rem 1.3rem; font-size:.92rem; letter-spacing:.01em; width:100%;}
+  .out-chip{ border:1.6px solid var(--accent); color:var(--accent); font-family:var(--font-display); font-weight:800; padding:.55rem 1.4rem; font-size:1rem; letter-spacing:.02em;}
+  .down-arrow{ color:var(--accent); font-size:1.1rem;}
+  .s13 .footnote{ font-family:var(--font-display); font-style:italic; font-weight:600; margin-top:1.8rem; color:var(--muted); font-size:.95rem;}
+  @media (max-width:760px){ .rec-flow{ grid-template-columns:1fr;} .bracket{ display:none;} }
+
+  /* ============ SLIDE 14 — WHY PRODUCT ============ */
+  .s14 .title{ max-width:14ch;}
+  .s14 .stepper{ max-width:640px;}
+  .s14 .pull{ margin-top:1.8rem; max-width:46ch; font-weight:500; font-size:clamp(1.15rem,2.1vw,1.65rem); color:var(--muted);}
+  .s14 .pull em{ color:var(--accent); font-weight:700;}
+  .why-final{ font-family:var(--font-display); font-weight:800; font-size:clamp(1.7rem,4vw,3.1rem); line-height:1.08; max-width:20ch; letter-spacing:-.02em; margin-top:2.6rem;}
+  .why-final em{ font-style:normal; color:var(--accent);}
+
+  /* ============ SLIDE 15 — CLOSING ============ */
+  .close-stack{ display:flex; flex-direction:column; gap:0;}
+  .close-stack .word{ font-family:var(--font-display); font-weight:800; font-size:clamp(3.2rem,10vw,8rem); line-height:.92; letter-spacing:-.035em;}
+  .close-stack .word.accent{ color:var(--accent);}
+  .close-sub{ margin-top:1.6rem; font-size:clamp(1rem,1.7vw,1.25rem); color:var(--muted); font-weight:600; max-width:32ch;}
+  .close-byline{ margin-top:clamp(2.4rem,7vw,4.5rem); padding-top:1.3rem; border-top:1px solid var(--line);}
+  .close-byline .name{ font-family:var(--font-display); font-weight:700; font-size:1.2rem;}
+  .close-byline .tag{ font-style:italic; color:var(--muted); font-size:.92rem; margin-top:.5rem;}
+</style>
+</head>
+<body>
+
+<div class="hud" aria-hidden="false">
+  <div class="hud__bar" id="progressBar"></div>
+  <div class="hud__brand">Norah Aljmhoor</div>
+  <div class="hud__counter" id="hudCounter">01 / 15</div>
+  <nav class="hud__dots" aria-label="Slide navigation">
+    <button data-target="s01" class="active" aria-label="Slide 1: Opening"></button>
+    <button data-target="s02" aria-label="Slide 2: Where it started"></button>
+    <button data-target="s03" aria-label="Slide 3: The foundation"></button>
+    <button data-target="s04" aria-label="Slide 4: Journey in numbers"></button>
+    <button data-target="s05" aria-label="Slide 5: Product evolution"></button>
+    <button data-target="s06" aria-label="Slide 6: Case study SCF"></button>
+    <button data-target="s07" aria-label="Slide 7: Case study financing journey"></button>
+    <button data-target="s08" aria-label="Slide 8: CLM"></button>
+    <button data-target="s09" aria-label="Slide 9: From problem to product"></button>
+    <button data-target="s10" aria-label="Slide 10: Product decision making"></button>
+    <button data-target="s11" aria-label="Slide 11: Continuous learning"></button>
+    <button data-target="s12" aria-label="Slide 12: Beyond work"></button>
+    <button data-target="s13" aria-label="Slide 13: Personal product"></button>
+    <button data-target="s14" aria-label="Slide 14: Why product management"></button>
+    <button data-target="s15" aria-label="Slide 15: Closing"></button>
+  </nav>
+  <div class="hint">Scroll or press ↓</div>
+</div>
+
+<main id="deck">
+
+  <!-- ============ SLIDE 01 — OPENING ============ -->
+  <section class="slide slide--dark s01" id="s01">
+    <div class="slide__inner">
+      <p class="hero-line reveal" style="--d:0">I Build to Make<br>Things <em>Easier.</em></p>
+      <p class="support reveal" style="--d:1">
+        <span>For customers.</span> <span class="sep">·</span> <span>For businesses.</span> <span class="sep">·</span> <span>For people.</span>
+      </p>
+      <div class="byline reveal" style="--d:2">
+        <div class="name">Norah Aljmhoor</div>
+        <div class="role">Product Manager</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 02 — WHERE IT STARTED ============ -->
+  <section class="slide slide--light s02" id="s02">
+    <span class="ghost-num">02</span>
+    <div class="slide__inner">
+      <div class="grid">
+        <div>
+          <p class="eyebrow reveal" style="--d:0">02 — Where It Started</p>
+          <h2 class="title reveal" style="--d:1">It Started With Curiosity.</h2>
+          <p class="prose reveal" style="--d:2">I chose Management Information Systems because I didn't want to understand only business or only technology. I wanted to understand how the two could work together to solve real human problems.</p>
+          <div class="quote-card reveal" style="--d:3">&ldquo;How can we make this easier?&rdquo;</div>
+        </div>
+        <figure class="reveal" style="--d:2">
+          <svg class="venn draw" viewBox="0 0 520 420" role="img" aria-label="Three overlapping circles labeled People, Business and Technology, with Me marked at their shared center.">
+            <circle cx="205" cy="165" r="135" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".55" pathLength="1"/>
+            <circle cx="325" cy="165" r="135" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".55" pathLength="1"/>
+            <circle cx="265" cy="278" r="135" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".55" pathLength="1"/>
+            <text x="95" y="95" font-family="Manrope, sans-serif" font-weight="700" font-size="15" letter-spacing="1.5" fill="currentColor">PEOPLE</text>
+            <text x="352" y="95" font-family="Manrope, sans-serif" font-weight="700" font-size="15" letter-spacing="1.5" fill="currentColor">BUSINESS</text>
+            <text x="197" y="405" font-family="Manrope, sans-serif" font-weight="700" font-size="15" letter-spacing="1.5" fill="currentColor">TECHNOLOGY</text>
+            <circle class="draw-c" cx="265" cy="205" r="5.5" fill="#8F2942" pathLength="1"/>
+            <text x="284" y="210" font-family="Bricolage Grotesque, sans-serif" font-weight="800" font-style="italic" font-size="19" fill="#8F2942">ME</text>
+          </svg>
+          <figcaption class="visually-hidden">People, Business and Technology overlap; Norah sits at their intersection.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 03 — THE FOUNDATION ============ -->
+  <section class="slide slide--light s03" id="s03">
+    <span class="ghost-num">03</span>
+    <div class="slide__inner">
+      <p class="eyebrow reveal" style="--d:0">03 — The Foundation</p>
+      <h2 class="title reveal" style="--d:1">Business Analysis Built My Product Mindset.</h2>
+      <p class="muted-row reveal" style="--d:2">Trained to deeply understand <span class="dot">·</span> Users <span class="dot">·</span> Processes <span class="dot">·</span> Business needs <span class="dot">·</span> Technology <span class="dot">·</span> Edge cases <span class="dot">·</span> Data <span class="dot">·</span> Stakeholders</p>
+      <div class="stepper reveal" style="--d:3">
+        <div class="node"><i></i><span>Understand</span></div>
+        <div class="node"><i></i><span>Question</span></div>
+        <div class="node"><i></i><span>Simplify</span></div>
+        <div class="node"><i></i><span>Build</span></div>
+        <div class="node"><i></i><span>Measure</span></div>
+        <div class="node"><i></i><span>Improve</span></div>
+      </div>
+      <div class="evolve-tag reveal" style="--d:4">but my questions evolved</div>
+      <div class="big-questions">
+        <p class="reveal" style="--d:5">Why are we building this?</p>
+        <p class="reveal" style="--d:6">Should we build it?</p>
+        <p class="reveal" style="--d:7">What problem are we actually solving?</p>
+        <p class="reveal" style="--d:8">What impact will it create?</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 04 — NUMBERS ============ -->
+  <section class="slide slide--light s04" id="s04">
+    <span class="ghost-num">04</span>
+    <div class="slide__inner">
+      <p class="eyebrow reveal" style="--d:0">04 — My Journey In Numbers</p>
+      <div class="stat-grid">
+        <div class="stat reveal-num" style="--d:1">
+          <div class="num">12+</div>
+          <div class="label">Projects Led</div>
+          <div class="example">Authorization &amp; User Management</div>
+        </div>
+        <div class="stat reveal-num" style="--d:2">
+          <div class="num">5+</div>
+          <div class="label">Products Contributed To</div>
+          <div class="example">Supply Chain Finance</div>
+        </div>
+        <div class="stat reveal-num" style="--d:3">
+          <div class="num">CLM</div>
+          <div class="label">Product Owned End‑to‑End</div>
+          <div class="example">From discovery and vision to delivery</div>
+        </div>
+        <div class="stat reveal-num" style="--d:4">
+          <div class="num">10+</div>
+          <div class="label">Cross‑Functional Stakeholders</div>
+          <div class="example">Technology · Operations · Compliance · Risk · Cybersecurity · Legal · UX</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 05 — PRODUCT EVOLUTION ============ -->
+  <section class="slide slide--light s05" id="s05">
+    <span class="ghost-num">05</span>
+    <div class="slide__inner">
+      <p class="eyebrow reveal" style="--d:0">05 — My Product Evolution</p>
+      <h2 class="title reveal" style="--d:1">From Contributing → To Owning.</h2>
+      <div class="journey reveal" style="--d:2">
+        <div class="stop"><div class="node"></div><div class="prod">Supply Chain<br>Finance</div><div class="act">Build &amp; Scale</div></div>
+        <div class="stop"><div class="node"></div><div class="prod">Financing<br>Journey</div><div class="act">Simplify &amp; Optimize</div></div>
+        <div class="stop"><div class="node"></div><div class="prod">Authorization &amp;<br>User Management</div><div class="act">Solve Complexity</div></div>
+        <div class="stop"><div class="node">CLM</div><div class="prod">Client Lifecycle<br>Management</div><div class="act">Own 0 → 1</div></div>
+      </div>
+      <p class="journey-close reveal" style="--d:3">Each product taught me something different. Together, they taught me how to own one.</p>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 06 — CASE STUDY: SCF ============ -->
+  <section class="slide slide--light s06" id="s06">
+    <span class="ghost-num">06</span>
+    <div class="slide__inner">
+      <div class="grid">
+        <div>
+          <p class="eyebrow reveal" style="--d:0">06 — Case Study · Supply Chain Finance</p>
+          <h2 class="title reveal" style="--d:1">Building at Scale.</h2>
+          <p class="prose reveal" style="--d:2">I contributed to building and evolving a Supply Chain Finance product from its early stages. The product involved major enterprise ecosystems, including programs with <b>Aramco</b> and <b>Saudi Electricity Company</b>.</p>
+          <p class="muted-row reveal" style="--d:3">What it taught me <span class="dot">·</span> Complex integrations <span class="dot">·</span> Enterprise stakeholders <span class="dot">·</span> Financial journeys <span class="dot">·</span> Operational dependencies <span class="dot">·</span> Product delivery <span class="dot">·</span> Scaling a product</p>
+          <p class="pull reveal" style="--d:4">SCF taught me how to build when <em>business, technology, operations and external partners</em> all need to move together.</p>
+        </div>
+        <div class="ecosystem reveal" style="--d:2">
+          <div class="eco-node">ENTERPRISE BUYER<span class="sub">Aramco · SEC</span></div>
+          <div class="eco-link">↕</div>
+          <div class="eco-node core">MANAFA / SCF</div>
+          <div class="eco-link">↕</div>
+          <div class="eco-node">SUPPLIERS</div>
+          <div class="eco-branch"><div class="line"></div><div class="eco-link" style="padding:0 .3rem;">↔</div><div class="line"></div></div>
+          <div class="eco-node">FINANCING</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 07 — CASE STUDY: FINANCING JOURNEY ============ -->
+  <section class="slide slide--light s07" id="s07">
+    <span class="ghost-num">07</span>
+    <div class="slide__inner">
+      <p class="eyebrow reveal" style="--d:0">07 — Case Study · Financing Journey</p>
+      <h2 class="title reveal" style="--d:1">Complexity Is Expensive.</h2>
+      <div class="compare reveal" style="--d:2">
+        <div class="col before">
+          <h4>Before</h4>
+          <p>Complex journey</p>
+          <p>More friction</p>
+          <p>Operational dependency</p>
+          <p>Longer processing</p>
+          <p>Higher cost</p>
+        </div>
+        <div class="arrow">→</div>
+        <div class="col focus">
+          <h4>What I Focused On</h4>
+          <p>Simplifying UX</p>
+          <p>Removing unnecessary steps</p>
+          <p>Automation</p>
+          <p>Re‑thinking the journey</p>
+          <p>Reducing operational dependency</p>
+        </div>
+        <div class="arrow">→</div>
+        <div class="col after">
+          <h4>After</h4>
+          <p>Simpler experience</p>
+          <p>Faster financing</p>
+          <p>Lower operational effort</p>
+          <p>Reduced cost</p>
+        </div>
+      </div>
+      <p class="better reveal" style="--d:3">Better UX = <em>Better Business.</em></p>
+      <div class="metrics reveal" style="--d:4">
+        <div class="metric"><div class="num">34%</div><div class="label">Cost Reduction</div></div>
+        <div class="metric"><div class="num">7M → 1M</div><div class="label">Processing Time</div></div>
+        <div class="metric"><div class="num">53%</div><div class="label">Fewer Manual Steps</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 08 — CLM TURN ============ -->
+  <section class="slide slide--dark s08" id="s08">
+    <span class="ghost-num">08</span>
+    <div class="slide__inner">
+      <p class="zero-line reveal" style="--d:0">Then I Got to Start From Zero.</p>
+      <div class="clm-lockup reveal-num" style="--d:1">
+        <div class="clm">CLM</div>
+        <div class="full">Client Lifecycle Management</div>
+      </div>
+      <p class="own-line reveal" style="--d:2">My first product owned end‑to‑end.</p>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 09 — FROM PROBLEM TO PRODUCT ============ -->
+  <section class="slide slide--dark s09" id="s09">
+    <span class="ghost-num">09</span>
+    <div class="slide__inner">
+      <p class="eyebrow reveal" style="--d:0">09 — From Problem To Product</p>
+      <div class="badge01 reveal" style="--d:1">0 → 1</div>
+      <h2 class="title reveal" style="--d:1">No Product. Just a Problem.</h2>
+      <p class="prose reveal" style="--d:2">Operations activities were fragmented across different admin pages and manual processes. I worked directly with Operations to understand how they actually work — then researched the market, defined the product vision, structured the modules, built the roadmap, prepared the requirements, and worked with Design and Technology toward delivery.</p>
+      <div class="flowline reveal" style="--d:3">
+        <div class="row">
+          <div class="step r1"><i></i><span>Operational<br>Pain</span></div>
+          <div class="step r1"><i></i><span>User<br>Discovery</span></div>
+          <div class="step r1"><i></i><span>Problem<br>Definition</span></div>
+          <div class="step r1"><i></i><span>Market<br>Research</span></div>
+          <div class="step r1"><i></i><span>Product<br>Vision</span></div>
+        </div>
+        <div class="row">
+          <div class="step r1"><i></i><span>Product<br>Architecture</span></div>
+          <div class="step r1"><i></i><span>Roadmap</span></div>
+          <div class="step r1"><i></i><span>Requirements</span></div>
+          <div class="step r1"><i></i><span>Design</span></div>
+          <div class="step r1"><i></i><span>Delivery</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 10 — PRODUCT DECISION MAKING ============ -->
+  <section class="slide slide--light s10" id="s10">
+    <span class="ghost-num">10</span>
+    <div class="slide__inner">
+      <p class="eyebrow reveal" style="--d:0">10 — Product Decision Making</p>
+      <h2 class="title reveal" style="--d:1">Good Product Decisions Need Context.</h2>
+      <div class="radial reveal" style="--d:2">
+        <div class="radial-ring"></div>
+        <div class="term">Customer<br>Experience</div>
+        <div class="term">Financial<br>Products</div>
+        <div class="term">SAMA<br>Regulations</div>
+        <div class="term">Compliance<br>/ AML</div>
+        <div class="center">UX alone is not enough.</div>
+        <div class="term">Cybersecurity</div>
+        <div class="term">Risk</div>
+        <div class="term">Operations</div>
+        <div class="term">Technology</div>
+      </div>
+      <div class="down-to reveal" style="--d:3">
+        <div class="arrow">↓</div>
+        <div class="result">Faster, more confident product decisions.</div>
+      </div>
+      <p class="prose reveal" style="--d:4">Working in fintech taught me to balance customer experience with regulation, security, risk, operations and technical feasibility.</p>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 11 — CONTINUOUS LEARNING ============ -->
+  <section class="slide slide--light s11" id="s11">
+    <span class="ghost-num">11</span>
+    <div class="slide__inner">
+      <p class="eyebrow reveal" style="--d:0">11 — Continuous Learning</p>
+      <h2 class="title reveal" style="--d:1">Curiosity Became a Habit.</h2>
+      <div class="cert-grid reveal" style="--d:2">
+        <div class="cert-col">
+          <h4>Strategy</h4>
+          <div class="benefit">Better prioritization</div>
+          <div class="cert-slot"><div class="logo"></div><div class="txt"><div class="cname">Certified Digital Product Manager (CDPM)®</div><div class="issuer">AIPMM</div></div></div>
+        </div>
+        <div class="cert-col">
+          <h4>Ownership</h4>
+          <div class="benefit">Owning outcomes, not just outputs</div>
+          <div class="cert-slot"><div class="logo"></div><div class="txt"><div class="cname">Professional Scrum Product Owner II (PSPO II)™</div><div class="issuer">Scrum.org</div></div></div>
+        </div>
+        <div class="cert-col">
+          <h4>Business Analysis</h4>
+          <div class="benefit">Better problem definition</div>
+          <div class="cert-slot"><div class="logo"></div><div class="txt"><div class="cname">Certification of Capability in Business Analysis (CCBA)®</div><div class="issuer">IIBA</div></div></div>
+        </div>
+        <div class="cert-col">
+          <h4>Communication</h4>
+          <div class="benefit">Better stakeholder leadership</div>
+          <div class="cert-slot"><div class="logo"></div><div class="txt"><div class="cname">Professional Scrum Master (PSM)™</div><div class="issuer">Scrum.org</div></div></div>
+        </div>
+      </div>
+      <p class="cert-close reveal" style="--d:3">I don't learn to collect certificates. I learn because I want to <em>get better at what I build.</em></p>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 12 — BEYOND WORK ============ -->
+  <section class="slide slide--tint s12" id="s12">
+    <span class="ghost-num">12</span>
+    <div class="slide__inner">
+      <div class="grid">
+        <div>
+          <p class="eyebrow reveal" style="--d:0">12 — Beyond Work</p>
+          <h2 class="title reveal" style="--d:1">Apparently, I Turn Everything Into a Product Problem.</h2>
+          <p class="big-q reveal" style="--d:2">&ldquo;Where should I go?&rdquo;</p>
+          <p class="prose reveal" style="--d:3">I live in Riyadh, and like everyone else, sometimes I spend more time deciding where to go than actually going.</p>
+          <p class="pull reveal" style="--d:4">Instead of accepting the problem&hellip; <em>I started building a product for it.</em></p>
+        </div>
+        <div class="map-wrap reveal" style="--d:2">
+          <svg viewBox="0 0 420 420" role="img" aria-label="Abstract minimal map of city streets with a highlighted pin representing an undecided destination.">
+            <g stroke="currentColor" stroke-width="1" opacity=".28">
+              <line x1="20" y1="60" x2="400" y2="60"/>
+              <line x1="20" y1="150" x2="400" y2="150"/>
+              <line x1="20" y1="255" x2="400" y2="255"/>
+              <line x1="20" y1="360" x2="400" y2="360"/>
+              <line x1="80" y1="20" x2="80" y2="400"/>
+              <line x1="175" y1="20" x2="175" y2="400"/>
+              <line x1="270" y1="20" x2="270" y2="400"/>
+              <line x1="345" y1="20" x2="345" y2="400"/>
+            </g>
+            <circle cx="80" cy="60" r="4" fill="currentColor" opacity=".35"/>
+            <circle cx="270" cy="150" r="4" fill="currentColor" opacity=".35"/>
+            <circle cx="345" cy="255" r="4" fill="currentColor" opacity=".35"/>
+            <circle cx="175" cy="360" r="4" fill="currentColor" opacity=".35"/>
+            <circle cx="200" cy="205" r="9" fill="#8F2942"/>
+            <circle cx="200" cy="205" r="18" fill="none" stroke="#8F2942" stroke-width="1.3" opacity=".55"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 13 — PERSONAL PRODUCT ============ -->
+  <section class="slide slide--tint s13" id="s13">
+    <span class="ghost-num">13</span>
+    <div class="slide__inner">
+      <p class="eyebrow reveal" style="--d:0">13 — Personal Product</p>
+      <h2 class="title reveal" style="--d:1">So I Built My Own Answer.</h2>
+      <div class="rec-flow reveal" style="--d:2">
+        <div class="inputs">
+          <div class="input-chip">My Preferences</div>
+          <div class="input-chip">Riyadh Places / Map</div>
+          <div class="input-chip">Traffic / Travel Time</div>
+          <div class="input-chip">Ratings</div>
+        </div>
+        <div class="bracket"></div>
+        <div class="model-out">
+          <div class="model-box">Recommendation<br>Model</div>
+          <div class="down-arrow">↓</div>
+          <div class="out-chip">&ldquo;Go Here.&rdquo;</div>
+        </div>
+      </div>
+      <p class="prose reveal" style="--d:3">I experimented with a model that evaluates places based on my preferences, map/location data, expected traffic and ratings — then recommends where I should go.</p>
+      <p class="footnote reveal" style="--d:4">Even deciding where to go became a product problem.</p>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 14 — WHY PRODUCT ============ -->
+  <section class="slide slide--dark s14" id="s14">
+    <span class="ghost-num">14</span>
+    <div class="slide__inner">
+      <p class="eyebrow reveal" style="--d:0">14 — The Why</p>
+      <h2 class="title reveal" style="--d:1">Why Product Management?</h2>
+      <div class="stepper reveal" style="--d:2">
+        <div class="node"><i></i><span>Understanding</span></div>
+        <div class="node"><i></i><span>Simplifying</span></div>
+        <div class="node"><i></i><span>Connecting</span></div>
+        <div class="node"><i></i><span>Building</span></div>
+        <div class="node"><i></i><span>Impact</span></div>
+      </div>
+      <p class="pull reveal" style="--d:3">Understanding problems. Simplifying complexity. Connecting people, business and technology. Turning ideas into something real — and <em>watching it make someone's life easier.</em></p>
+      <p class="why-final reveal" style="--d:4">Product Management isn't a career switch for me. It's the <em>natural evolution</em> of everything I've been building toward.</p>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 15 — CLOSING ============ -->
+  <section class="slide slide--dark s15" id="s15">
+    <div class="slide__inner">
+      <div class="close-stack">
+        <div class="word reveal" style="--d:0">Build.</div>
+        <div class="word reveal" style="--d:1">Simplify.</div>
+        <div class="word reveal accent" style="--d:2">Impact.</div>
+      </div>
+      <p class="close-sub reveal" style="--d:3">That's the kind of Product Manager I want to be.</p>
+      <div class="close-byline reveal" style="--d:4">
+        <div class="name">Norah Aljmhoor</div>
+        <div class="tag">Let's build something people love to use.</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+(function(){
+  var deck = document.getElementById('deck');
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var dots = Array.prototype.slice.call(document.querySelectorAll('.hud__dots button'));
+  var counter = document.getElementById('hudCounter');
+  var bar = document.getElementById('progressBar');
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var current = 0;
+
+  function markScrolled(){ document.body.classList.add('scrolled'); }
+  ['wheel','keydown','touchmove'].forEach(function(ev){
+    window.addEventListener(ev, markScrolled, {passive:true, once:true});
+  });
+
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      if(entry.isIntersecting && entry.intersectionRatio > 0.55){
+        entry.target.classList.add('in-view');
+        var idx = slides.indexOf(entry.target);
+        if(idx > -1){
+          current = idx;
+          counter.textContent = String(idx+1).padStart(2,'0') + ' / ' + slides.length;
+          dots.forEach(function(d,i){ d.classList.toggle('active', i===idx); });
+        }
+      } else if (!entry.isIntersecting) {
+        entry.target.classList.remove('in-view');
+      }
+    });
+  }, { root: deck, threshold: [0, 0.55] });
+  slides.forEach(function(s){ io.observe(s); });
+
+  function go(index){
+    index = Math.max(0, Math.min(slides.length-1, index));
+    slides[index].scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+  }
+
+  window.addEventListener('keydown', function(e){
+    if(['ArrowDown','ArrowRight','PageDown',' '].indexOf(e.key) > -1){
+      e.preventDefault(); go(current+1);
+    } else if(['ArrowUp','ArrowLeft','PageUp'].indexOf(e.key) > -1){
+      e.preventDefault(); go(current-1);
+    } else if(e.key === 'Home'){
+      e.preventDefault(); go(0);
+    } else if(e.key === 'End'){
+      e.preventDefault(); go(slides.length-1);
+    }
+  });
+
+  dots.forEach(function(d){
+    d.addEventListener('click', function(){
+      var target = document.getElementById(d.getAttribute('data-target'));
+      if(target) target.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block:'start' });
+    });
+  });
+
+  deck.addEventListener('scroll', function(){
+    var pct = deck.scrollTop / (deck.scrollHeight - deck.clientHeight) * 100;
+    bar.style.width = (isFinite(pct)? pct : 0) + '%';
+  }, { passive: true });
+
+  // Mark first slide in-view immediately (before any scroll/IO tick)
+  slides[0].classList.add('in-view');
+})();
+</script>
+</body>
+</html>
